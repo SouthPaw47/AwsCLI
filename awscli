@@ -1,0 +1,19 @@
+#!/bin/bash
+region_name=$(aws configure list | grep region | awk '{print $2}')
+
+instances_data=$(aws ec2 describe-instances --region "$region_name" --output json)
+
+total_instances=$(echo "$instances_data" | jq '[.Reservations[].Instances[]] | length')
+
+running_instances=$(echo "$instances_data" | jq '[.Reservations[].Instances[] | select(.State.Name == "running")] | length')
+
+stopped_instances=$((total_instances - running_instances))
+
+echo "Number of instances: $total_instances"
+echo "Number of running instances: $running_instances"
+echo "Number of stopped instances: $stopped_instances"
+echo "[+] networking info: "
+
+$(echo "$instances_data" | '.Reservations[].Instances[] | "\(.InstanceId) \(.PublicIpAddress)"') | while IFS=' ' read -r instance_id public_ip; do
+  echo "Instance ID: $instance_id, Public IP: $public_ip"
+done
